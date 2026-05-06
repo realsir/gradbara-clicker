@@ -9,11 +9,13 @@
     :root {
       --bg: #ffffff;
       --text: #111111;
+      --panel: rgba(255,255,255,0.92);
       --shadow: 0 16px 40px rgba(0,0,0,0.06);
       --pixel-font: 'Public Pixel', monospace;
     }
 
     * { box-sizing: border-box; }
+
     html, body {
       margin: 0;
       min-height: 100vh;
@@ -45,35 +47,75 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 24px;
+      gap: 20px;
       padding: 0;
     }
 
-    .title-trigger {
-      border: 2px solid var(--text);
-      background: rgba(255,255,255,0.92);
-      box-shadow: var(--shadow);
-      padding: 20px 28px;
-      cursor: pointer;
-      font-family: var(--pixel-font);
-      font-size: clamp(22px, 4vw, 42px);
-      line-height: 1.6;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+    .menu {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
       opacity: 0;
       transform: translateY(0) scale(0.97);
       animation: revealTitle 1.8s ease forwards;
     }
 
-    .title-trigger:hover {
+    .title-label,
+    .mode-button,
+    .menu-button,
+    .ending {
+      border: 2px solid var(--text);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      font-family: var(--pixel-font);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .title-label {
+      padding: 20px 28px;
+      font-size: clamp(22px, 4vw, 42px);
+      line-height: 1.6;
+      cursor: default;
+      user-select: none;
+      text-align: center;
+    }
+
+    .mode-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: min(430px, 86vw);
+    }
+
+    .mode-button,
+    .menu-button {
+      padding: 14px 18px;
+      cursor: pointer;
+      font-size: clamp(11px, 1.8vw, 14px);
+      line-height: 1.5;
+      width: 100%;
+      transition: transform 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+    }
+
+    .mode-button:hover,
+    .menu-button:hover,
+    .ending:hover {
       transform: translateY(-2px) scale(1.02);
+    }
+
+    .mode-button:active,
+    .menu-button:active {
+      transform: scale(0.98);
     }
 
     .game {
       display: none;
       flex-direction: column;
       align-items: center;
-      gap: 20px;
+      gap: 18px;
       opacity: 0;
       transform: translateY(16px);
     }
@@ -81,6 +123,10 @@
     .game.active {
       display: flex;
       animation: fadeUp 0.8s ease forwards;
+    }
+
+    .click-wrap {
+      position: relative;
     }
 
     .click-image {
@@ -96,13 +142,28 @@
     .click-image:hover { transform: scale(1.03); }
     .click-image:active { transform: scale(0.96); }
 
-    .counter {
-      background: rgba(255,255,255,0.92);
+    .info-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .counter,
+    .mode-label,
+    .timer {
+      background: var(--panel);
       border: 2px solid var(--text);
       padding: 12px 18px;
       box-shadow: var(--shadow);
       font-size: clamp(12px, 2vw, 18px);
       line-height: 1.6;
+      text-align: center;
+      min-width: min(340px, 75vw);
+    }
+
+    .timer.warning {
+      background: rgba(255, 228, 228, 0.95);
     }
 
     .progress {
@@ -122,19 +183,19 @@
         #111111 0 18px,
         #2d2d2d 18px 36px
       );
-      transition: width 0.25s ease;
+      transition: width 0.12s linear;
     }
 
     .ending {
       display: none;
-      font-size: clamp(24px, 4vw, 48px);
+      font-size: clamp(18px, 3vw, 34px);
       padding: 20px 28px;
-      background: rgba(255,255,255,0.92);
-      border: 2px solid var(--text);
-      box-shadow: var(--shadow);
       animation: endingReveal 1s ease forwards;
       cursor: pointer;
       text-align: center;
+      max-width: min(620px, 90vw);
+      line-height: 1.7;
+      white-space: pre-line;
     }
 
     .ending.active {
@@ -175,8 +236,9 @@
     }
 
     @media (max-width: 640px) {
-      .screen { gap: 20px; padding: 0; }
-      .title-trigger { padding: 16px 22px; }
+      .screen { gap: 18px; }
+      .title-label { padding: 16px 20px; }
+      .mode-button, .menu-button { padding: 12px 14px; }
     }
   </style>
 </head>
@@ -184,106 +246,282 @@
   <canvas id="rain" aria-hidden="true"></canvas>
 
   <main class="screen">
-    <button class="title-trigger" id="startButton">GRADBARA CLICKER ./</button>
+    <section class="menu" id="menuPanel">
+      <div class="title-label">GRADBARA CLICKER ./</div>
+
+      <div class="mode-buttons">
+        <button class="mode-button" data-mode="classic">CLASSIC ./ NO TIME LIMITS, EASY MODE</button>
+        <button class="mode-button" data-mode="speedrun">SPEEDRUN ./ 80 CLICKS BEFORE TIMER ENDS</button>
+        <button class="mode-button" data-mode="endurance">ENDURANCE ./ PROGRESS DRAINS IF U STOP</button>
+      </div>
+    </section>
 
     <section class="game" id="gamePanel">
-      <div style="position: relative;">
+      <div class="click-wrap" id="clickWrap">
         <img class="click-image" id="clickImage" src="1.png" alt="Gradbara" />
         <div class="boom" id="boomFx"></div>
       </div>
 
-      <div class="counter" id="counterText">CLICKS: 0</div>
+      <div class="info-stack" id="infoStack">
+        <div class="mode-label" id="modeLabel">MODE: CLASSIC ./</div>
+        <div class="counter" id="counterText">CLICKS: 0 / 80</div>
+        <div class="timer" id="timerText">STATUS: READY ./</div>
+      </div>
 
-      <div class="progress">
+      <div class="progress" id="progressBar">
         <div class="progress-fill" id="progressFill"></div>
       </div>
+
+      <button class="menu-button" id="menuButton">./ MENU</button>
     </section>
 
     <div class="ending" id="endingText">U R SO RICH ./</div>
   </main>
 
   <script>
-    const startButton = document.getElementById('startButton');
+    const menuPanel = document.getElementById('menuPanel');
+    const modeButtons = document.querySelectorAll('.mode-button');
     const gamePanel = document.getElementById('gamePanel');
     const clickImage = document.getElementById('clickImage');
+    const clickWrap = document.getElementById('clickWrap');
     const counterText = document.getElementById('counterText');
     const progressFill = document.getElementById('progressFill');
+    const progressBar = document.getElementById('progressBar');
     const endingText = document.getElementById('endingText');
     const boomFx = document.getElementById('boomFx');
+    const timerText = document.getElementById('timerText');
+    const modeLabel = document.getElementById('modeLabel');
+    const menuButton = document.getElementById('menuButton');
+    const infoStack = document.getElementById('infoStack');
 
     const stages = ['1.png', '2.png', '3.png', '4.png'];
+    const GOAL = 80;
+    const SPEEDRUN_LIMIT = 15000;
+    const ENDURANCE_DRAIN_PER_SECOND = 3.5;
+    const GAME_LINK = 'https://gradbara-clicker.vercel.app/';
+
     let totalClicks = 0;
     let gameStarted = false;
     let finished = false;
+    let selectedMode = 'classic';
+    let startTime = 0;
+    let lastFrameTime = 0;
+    let animationFrameId = null;
 
-    function render() {
-      counterText.textContent = `CLICKS: ${totalClicks}`;
+    function getModeLabel(mode) {
+      if (mode === 'speedrun') return 'MODE: SPEEDRUN ./';
+      if (mode === 'endurance') return 'MODE: ENDURANCE ./';
+      return 'MODE: CLASSIC ./';
+    }
 
-      if (totalClicks >= 80) {
-        progressFill.style.width = '100%';
+    function getStageIndex(clicks) {
+      return Math.min(stages.length - 1, Math.floor(clicks / 20));
+    }
+
+    function updateStageImage() {
+      clickImage.src = stages[getStageIndex(totalClicks)];
+    }
+
+    function updateProgress() {
+      const percent = Math.max(0, Math.min(100, (totalClicks / GOAL) * 100));
+      progressFill.style.width = `${percent}%`;
+    }
+
+    function updateCounter() {
+      counterText.textContent = `CLICKS: ${Math.floor(totalClicks)} / ${GOAL}`;
+    }
+
+    function updateTimer(now = performance.now()) {
+      if (!gameStarted || finished) return;
+
+      if (selectedMode === 'speedrun') {
+        const elapsed = now - startTime;
+        const remaining = Math.max(0, SPEEDRUN_LIMIT - elapsed);
+        const seconds = (remaining / 1000).toFixed(2);
+        timerText.textContent = `TIME LEFT: ${seconds}S ./`;
+        timerText.classList.toggle('warning', remaining <= 5000);
+
+        if (remaining <= 0 && totalClicks < GOAL) {
+          loseGame('TIME UP ./ TOO SLOW');
+        }
         return;
       }
 
-      const stageIndex = Math.floor(totalClicks / 20);
-      const clicksInBlock = totalClicks % 20;
-      progressFill.style.width = `${(clicksInBlock / 20) * 100}%`;
-      clickImage.src = stages[stageIndex];
+      if (selectedMode === 'endurance') {
+        timerText.textContent = 'STATUS: KEEP CLICKING ./';
+        timerText.classList.remove('warning');
+        return;
+      }
+
+      timerText.textContent = 'STATUS: NO TIME LIMITS ./';
+      timerText.classList.remove('warning');
     }
 
-    startButton.addEventListener('click', () => {
-      if (gameStarted) return;
+    function render(now = performance.now()) {
+      updateCounter();
+      updateProgress();
+      updateStageImage();
+      updateTimer(now);
+    }
+
+    function resetGameVisualState() {
+      clickWrap.style.display = 'block';
+      clickImage.style.opacity = '1';
+      clickImage.style.transform = 'scale(1)';
+      clickImage.style.filter = 'none';
+      clickImage.style.transition = 'transform 0.15s ease';
+      boomFx.classList.remove('active');
+
+      progressBar.style.display = 'block';
+      infoStack.style.display = 'flex';
+      menuButton.style.display = 'block';
+      endingText.classList.remove('active');
+      endingText.textContent = 'U R SO RICH ./';
+      timerText.classList.remove('warning');
+      progressFill.style.width = '0%';
+    }
+
+    function startGame(mode) {
+      selectedMode = mode;
+      totalClicks = 0;
       gameStarted = true;
+      finished = false;
+      startTime = performance.now();
+      lastFrameTime = startTime;
+
+      resetGameVisualState();
+      modeLabel.textContent = getModeLabel(selectedMode);
+
+      menuPanel.style.display = 'none';
       gamePanel.classList.add('active');
-      startButton.remove();
+
+      render(startTime);
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function goToMenu() {
+      cancelAnimationFrame(animationFrameId);
+      gameStarted = false;
+      finished = false;
+      totalClicks = 0;
+      selectedMode = 'classic';
+
+      resetGameVisualState();
+      modeLabel.textContent = 'MODE: CLASSIC ./';
+      counterText.textContent = `CLICKS: 0 / ${GOAL}`;
+      timerText.textContent = 'STATUS: READY ./';
+      progressFill.style.width = '0%';
+      clickImage.src = stages[0];
+
+      gamePanel.classList.remove('active');
+      menuPanel.style.display = 'flex';
+    }
+
+    function showEnding(text, withExplosion = true) {
+      finished = true;
+      cancelAnimationFrame(animationFrameId);
+
+      if (withExplosion) {
+        boomFx.classList.add('active');
+        clickImage.style.transition = 'transform 0.3s ease, opacity 0.5s ease';
+        clickImage.style.transform = 'scale(1.25)';
+        clickImage.style.filter = 'brightness(1.6) contrast(1.3)';
+
+        setTimeout(() => {
+          clickImage.style.opacity = '0';
+        }, 150);
+
+        setTimeout(() => {
+          clickWrap.style.display = 'none';
+          progressBar.style.display = 'none';
+          infoStack.style.display = 'none';
+          menuButton.style.display = 'none';
+          endingText.textContent = text;
+          endingText.classList.add('active');
+        }, 800);
+      } else {
+        clickWrap.style.display = 'none';
+        progressBar.style.display = 'none';
+        infoStack.style.display = 'none';
+        menuButton.style.display = 'none';
+        endingText.textContent = text;
+        endingText.classList.add('active');
+      }
+    }
+
+    function winGame() {
+      totalClicks = GOAL;
+      render(performance.now());
+
+      if (selectedMode === 'speedrun') {
+        const finalTime = ((performance.now() - startTime) / 1000).toFixed(2);
+        showEnding(`U R FAST ./ ${finalTime}S ./ POST IT`);
+        return;
+      }
+
+      if (selectedMode === 'endurance') {
+        showEnding('U SURVIVED ./ STILL RICH ./');
+        return;
+      }
+
+      showEnding('U R SO RICH ./');
+    }
+
+    function loseGame(message) {
+      showEnding(`${message} ./ TRY AGAIN`, false);
+    }
+
+    function gameLoop(now) {
+      if (!gameStarted || finished) return;
+
+      const delta = (now - lastFrameTime) / 1000;
+      lastFrameTime = now;
+
+      if (selectedMode === 'endurance') {
+        totalClicks = Math.max(0, totalClicks - ENDURANCE_DRAIN_PER_SECOND * delta);
+      }
+
+      render(now);
+
+      if (totalClicks >= GOAL) {
+        winGame();
+        return;
+      }
+
+      animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    modeButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        startGame(button.dataset.mode);
+      });
     });
 
     clickImage.addEventListener('click', () => {
       if (!gameStarted || finished) return;
       totalClicks += 1;
+      render(performance.now());
 
-      if (totalClicks < 80) {
-        render();
-        return;
+      if (totalClicks >= GOAL) {
+        winGame();
       }
-
-      finished = true;
-      render();
-
-      // Скрываем счётчик и шкалу
-      counterText.style.display = 'none';
-      progressFill.closest('.progress').style.display = 'none';
-
-      // Анимация взрыва
-      boomFx.classList.add('active');
-
-      clickImage.style.transition = 'transform 0.3s ease, opacity 0.5s ease';
-      clickImage.style.transform = 'scale(1.25)';
-      clickImage.style.filter = 'brightness(1.6) contrast(1.3)';
-
-      setTimeout(() => {
-        clickImage.style.opacity = '0';
-      }, 150);
-
-      setTimeout(() => {
-        clickImage.parentElement.style.display = 'none';
-        endingText.classList.add('active');
-      }, 800);
     });
 
-    render();
+    menuButton.addEventListener('click', goToMenu);
 
-    // Сделать надпись кликабельной и открывающей Twitter‑пост
     endingText.addEventListener('click', () => {
-      const tweetText = encodeURIComponent("grad's is so rich ./");
+      const firstSentence = endingText.textContent.replace(/\s+POST IT$/i, '').trim();
+      const tweetMessage = `${firstSentence}\n./ let's play gradclicker: ${GAME_LINK}`;
+      const tweetText = encodeURIComponent(tweetMessage);
       const url = `https://x.com/intent/post?text=${tweetText}`;
       window.open(url, '_blank', 'noopener,noreferrer');
     });
 
-    // Rain animation - ONLY "./" symbols
     const canvas = document.getElementById('rain');
     const ctx = canvas.getContext('2d');
     let drops = [];
-    let animationId;
+    let rainAnimationId;
 
     function resizeCanvas() {
       const dpr = window.devicePixelRatio || 1;
@@ -326,7 +564,7 @@
       }
 
       ctx.globalAlpha = 1;
-      animationId = requestAnimationFrame(animateRain);
+      rainAnimationId = requestAnimationFrame(animateRain);
     }
 
     window.addEventListener('resize', resizeCanvas);
